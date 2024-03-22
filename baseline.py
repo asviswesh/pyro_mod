@@ -14,30 +14,37 @@ from tqdm import tqdm
 class BaselineNet(nn.Module):
     def __init__(self, hidden_1, hidden_2):
         super().__init__()
-        self.fc1 = nn.Linear(784, hidden_1)
+        self.hidden_1 = hidden_1
+        self.hidden_2 = hidden_2
+        self.fc1 = nn.Linear(128, hidden_1)
         self.fc2 = nn.Linear(hidden_1, hidden_2)
-        self.fc3 = nn.Linear(hidden_2, 784)
+        self.fc3 = nn.Linear(hidden_2, 128*28*28) 
         self.relu = nn.ReLU()
 
     def forward(self, x):
-        x = x.view(-1, 784)
-        hidden = self.relu(self.fc1(x))
+        input_size = x.size(-1)
+
+        if input_size != self.fc1.in_features:
+            self.fc1 = nn.Linear(input_size, self.hidden_1)
+            self.fc2 = nn.Linear(self.hidden_1, self.hidden_2)
+            self.fc3 = nn.Linear(self.hidden_2, input_size*28*28)
+
+        hidden = self.relu(self.fc1(x.float()))
         hidden = self.relu(self.fc2(hidden))
         y = torch.sigmoid(self.fc3(hidden))
+        y = y.view(input_size, 1, 28, 28)
         return y
 
-
-class MaskedBCELoss(nn.Module):
-    def __init__(self, masked_with=-1):
+    
+class BCELoss(nn.Module):
+    def __init__(self):
         super().__init__()
-        self.masked_with = masked_with
-
+    
     def forward(self, input, target):
         target = target.view(input.shape)
-        # only calculate loss on target pixels (value = -1)
         loss = F.binary_cross_entropy(
-            input[target != self.masked_with],
-            target[target != self.masked_with],
+            input,
+            target,
             reduction="none",
         )
         return loss.sum()
@@ -56,7 +63,7 @@ def train(
     baseline_net = BaselineNet(500, 500)
     baseline_net.to(device)
     optimizer = torch.optim.Adam(baseline_net.parameters(), lr=learning_rate)
-    criterion = MaskedBCELoss()
+    criterion = BCELoss()
     best_loss = np.inf
     early_stop_count = 0
 
@@ -65,6 +72,7 @@ def train(
             if phase == "train":
                 baseline_net.train()
             else:
+                print(f"Currently on epoch {epoch}")
                 baseline_net.eval()
 
             running_loss = 0.0
@@ -74,13 +82,17 @@ def train(
                 dataloaders[phase], desc="NN Epoch {} {}".format(epoch, phase).ljust(20)
             )
             for i, batch in enumerate(bar):
-                inputs = batch["input"].to(device)
-                outputs = batch["output"].to(device)
+                inputs = batch["digit"].to(device)
+                outputs = batch["original"].to(device)
 
                 optimizer.zero_grad()
 
                 with torch.set_grad_enabled(phase == "train"):
                     preds = baseline_net(inputs)
+                    # print("Print preds shape")
+                    # print(preds.shape)
+                    # print("Print outputs shape")
+                    # print(outputs.shape)
                     loss = criterion(preds, outputs) / inputs.size(0)
                     if phase == "train":
                         loss.backward()

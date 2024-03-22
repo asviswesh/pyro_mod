@@ -19,71 +19,110 @@ def main(args):
     results = []
     columns = []
 
-    for num_quadrant_inputs in args.num_quadrant_inputs:
-        # adds an s in case of plural quadrants
-        maybes = "s" if num_quadrant_inputs > 1 else ""
+    print("Running for theta = {}".format(args.theta_input))
 
-        print(
-            "Training with {} quadrant{} as input...".format(
-                num_quadrant_inputs, maybes
-            )
+    _, _, dataloaders, dataset_sizes = get_data(
+                batch_size=128
         )
-
-        # Dataset
-        datasets, dataloaders, dataset_sizes = get_data(
-            num_quadrant_inputs=num_quadrant_inputs, batch_size=128
-        )
-
-        # Train baseline
-        baseline_net = baseline.train(
+    # It should stop here.
+    baseline_net = baseline.train(
             device=device,
             dataloaders=dataloaders,
             dataset_sizes=dataset_sizes,
             learning_rate=args.learning_rate,
             num_epochs=args.num_epochs,
             early_stop_patience=args.early_stop_patience,
-            model_path="baseline_net_q{}.pth".format(num_quadrant_inputs),
+            model_path="baseline_net_theta{}.pth".format(args.theta_input),
         )
-
-        # Train CVAE
-        cvae_net = cvae.train(
+    
+    cvae_net = cvae.train(
             device=device,
             dataloaders=dataloaders,
             dataset_sizes=dataset_sizes,
             learning_rate=args.learning_rate,
             num_epochs=args.num_epochs,
             early_stop_patience=args.early_stop_patience,
-            model_path="cvae_net_q{}.pth".format(num_quadrant_inputs),
+            model_path="cvae_net_theta{}.pth".format(args.theta_input),
             pre_trained_baseline_net=baseline_net,
         )
-
-        # Visualize conditional predictions
-        visualize(
+    
+    # Retrive conditional log-likelihood
+    df = generate_table(
             device=device,
-            num_quadrant_inputs=num_quadrant_inputs,
-            pre_trained_baseline=baseline_net,
-            pre_trained_cvae=cvae_net,
-            num_images=args.num_images,
-            num_samples=args.num_samples,
-            image_path="cvae_plot_q{}.png".format(num_quadrant_inputs),
-        )
-
-        # Retrieve conditional log likelihood
-        df = generate_table(
-            device=device,
-            num_quadrant_inputs=num_quadrant_inputs,
             pre_trained_baseline=baseline_net,
             pre_trained_cvae=cvae_net,
             num_particles=args.num_particles,
             col_name="{} quadrant{}".format(num_quadrant_inputs, maybes),
         )
-        results.append(df)
-        columns.append("{} quadrant{}".format(num_quadrant_inputs, maybes))
-
+    
+    results.append(df)
     results = pd.concat(results, axis=1, ignore_index=True)
-    results.columns = columns
-    results.loc["Performance gap", :] = results.iloc[0, :] - results.iloc[1, :]
-    results.to_csv("results.csv")
+
+    # for num_quadrant_inputs in args.num_quadrant_inputs:
+    #     # adds an s in case of plural quadrants
+    #     maybes = "s" if num_quadrant_inputs > 1 else ""
+
+    #     print(
+    #         "Training with {} quadrant{} as input...".format(
+    #             num_quadrant_inputs, maybes
+    #         )
+    #     )
+
+    #     # Dataset
+    #     datasets, dataloaders, dataset_sizes = get_data(
+    #         num_quadrant_inputs=num_quadrant_inputs, batch_size=128
+    #     )
+
+    #     # Train baseline
+    #     baseline_net = baseline.train(
+    #         device=device,
+    #         dataloaders=dataloaders,
+    #         dataset_sizes=dataset_sizes,
+    #         learning_rate=args.learning_rate,
+    #         num_epochs=args.num_epochs,
+    #         early_stop_patience=args.early_stop_patience,
+    #         model_path="baseline_net_q{}.pth".format(num_quadrant_inputs),
+    #     )
+
+    #     # Train CVAE
+    #     cvae_net = cvae.train(
+    #         device=device,
+    #         dataloaders=dataloaders,
+    #         dataset_sizes=dataset_sizes,
+    #         learning_rate=args.learning_rate,
+    #         num_epochs=args.num_epochs,
+    #         early_stop_patience=args.early_stop_patience,
+    #         model_path="cvae_net_q{}.pth".format(num_quadrant_inputs),
+    #         pre_trained_baseline_net=baseline_net,
+    #     )
+
+    #     # Visualize conditional predictions
+    #     visualize(
+    #         device=device,
+    #         num_quadrant_inputs=num_quadrant_inputs,
+    #         pre_trained_baseline=baseline_net,
+    #         pre_trained_cvae=cvae_net,
+    #         num_images=args.num_images,
+    #         num_samples=args.num_samples,
+    #         image_path="cvae_plot_q{}.png".format(num_quadrant_inputs),
+    #     )
+
+    #     # Retrieve conditional log likelihood
+    #     df = generate_table(
+    #         device=device,
+    #         num_quadrant_inputs=num_quadrant_inputs,
+    #         pre_trained_baseline=baseline_net,
+    #         pre_trained_cvae=cvae_net,
+    #         num_particles=args.num_particles,
+    #         col_name="{} quadrant{}".format(num_quadrant_inputs, maybes),
+    #     )
+    #     results.append(df)
+    #     columns.append("{} quadrant{}".format(num_quadrant_inputs, maybes))
+
+    # results = pd.concat(results, axis=1, ignore_index=True)
+    # results.columns = columns
+    # results.loc["Performance gap", :] = results.iloc[0, :] - results.iloc[1, :]
+    # results.to_csv("results.csv")
 
 
 if __name__ == "__main__":
@@ -91,13 +130,11 @@ if __name__ == "__main__":
     # parse command line arguments
     parser = argparse.ArgumentParser(description="parse args")
     parser.add_argument(
-        "-nq",
-        "--num-quadrant-inputs",
-        metavar="N",
+        "-theta",
+        "--theta-input",
         type=int,
-        nargs="+",
-        default=[1, 2, 3],
-        help="num of quadrants to use as inputs",
+        default=1,
+        help="theta: the digit to reproduce in the model output",
     )
     parser.add_argument(
         "-n", "--num-epochs", default=101, type=int, help="number of training epochs"
@@ -135,3 +172,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main(args)
+

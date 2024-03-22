@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
-from baseline import MaskedBCELoss
+from baseline import BCELoss
 from mnist import get_data
 from torch.utils.data import DataLoader
 from torchvision.utils import make_grid
@@ -48,8 +48,11 @@ def visualize(
     image_path=None,
 ):
     # Load sample random data
+    # datasets, _, dataset_sizes = get_data(
+    #     num_quadrant_inputs=num_quadrant_inputs, batch_size=num_images
+    # )
     datasets, _, dataset_sizes = get_data(
-        num_quadrant_inputs=num_quadrant_inputs, batch_size=num_images
+        batch_size=num_images
     )
     dataloader = DataLoader(datasets["val"], batch_size=num_images, shuffle=True)
 
@@ -111,10 +114,9 @@ def visualize(
     # plot tensors
     imshow(grid_tensor, image_path=image_path)
 
-
+# Modified to not include num_quadrant_inputs
 def generate_table(
     device,
-    num_quadrant_inputs,
     pre_trained_baseline,
     pre_trained_cvae,
     num_particles,
@@ -122,11 +124,11 @@ def generate_table(
 ):
     # Load sample random data
     datasets, dataloaders, dataset_sizes = get_data(
-        num_quadrant_inputs=num_quadrant_inputs, batch_size=32
+            batch_size=32
     )
 
     # Load sample data
-    criterion = MaskedBCELoss()
+    criterion = BCELoss()
     loss_fn = Trace_ELBO(num_particles=num_particles).differentiable_loss
 
     baseline_cll = 0.0
