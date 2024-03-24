@@ -7,6 +7,7 @@ import baseline
 import cvae
 import pandas as pd
 import torch
+from torchvision.utils import save_image
 from util import generate_table, get_data, visualize
 
 import pyro
@@ -20,11 +21,13 @@ def main(args):
     columns = []
 
     print("Running for theta = {}".format(args.theta_input))
-
-    _, _, dataloaders, dataset_sizes = get_data(
+    label = torch.tensor(args.theta_input)
+    print(label)
+    _, dataloaders, dataset_sizes = get_data(
                 batch_size=128
         )
-    # It should stop here.
+    
+    # Ran to compare log likelihoods.
     baseline_net = baseline.train(
             device=device,
             dataloaders=dataloaders,
@@ -43,86 +46,25 @@ def main(args):
             num_epochs=args.num_epochs,
             early_stop_patience=args.early_stop_patience,
             model_path="cvae_net_theta{}.pth".format(args.theta_input),
-            pre_trained_baseline_net=baseline_net,
         )
     
+
+    
+    print("Finished running CVAE!")
+
+    reconstructed_image = cvae_net.model(label).detach().cpu()
+    save_image(reconstructed_image, f"/Users/aviswesh/Downloads/reconstructed_digit_{args.theta_input}.png")
     # Retrive conditional log-likelihood
     df = generate_table(
             device=device,
             pre_trained_baseline=baseline_net,
             pre_trained_cvae=cvae_net,
             num_particles=args.num_particles,
-            col_name="{} quadrant{}".format(num_quadrant_inputs, maybes),
+            col_name="Log Likelihoods",
         )
     
     results.append(df)
-    results = pd.concat(results, axis=1, ignore_index=True)
-
-    # for num_quadrant_inputs in args.num_quadrant_inputs:
-    #     # adds an s in case of plural quadrants
-    #     maybes = "s" if num_quadrant_inputs > 1 else ""
-
-    #     print(
-    #         "Training with {} quadrant{} as input...".format(
-    #             num_quadrant_inputs, maybes
-    #         )
-    #     )
-
-    #     # Dataset
-    #     datasets, dataloaders, dataset_sizes = get_data(
-    #         num_quadrant_inputs=num_quadrant_inputs, batch_size=128
-    #     )
-
-    #     # Train baseline
-    #     baseline_net = baseline.train(
-    #         device=device,
-    #         dataloaders=dataloaders,
-    #         dataset_sizes=dataset_sizes,
-    #         learning_rate=args.learning_rate,
-    #         num_epochs=args.num_epochs,
-    #         early_stop_patience=args.early_stop_patience,
-    #         model_path="baseline_net_q{}.pth".format(num_quadrant_inputs),
-    #     )
-
-    #     # Train CVAE
-    #     cvae_net = cvae.train(
-    #         device=device,
-    #         dataloaders=dataloaders,
-    #         dataset_sizes=dataset_sizes,
-    #         learning_rate=args.learning_rate,
-    #         num_epochs=args.num_epochs,
-    #         early_stop_patience=args.early_stop_patience,
-    #         model_path="cvae_net_q{}.pth".format(num_quadrant_inputs),
-    #         pre_trained_baseline_net=baseline_net,
-    #     )
-
-    #     # Visualize conditional predictions
-    #     visualize(
-    #         device=device,
-    #         num_quadrant_inputs=num_quadrant_inputs,
-    #         pre_trained_baseline=baseline_net,
-    #         pre_trained_cvae=cvae_net,
-    #         num_images=args.num_images,
-    #         num_samples=args.num_samples,
-    #         image_path="cvae_plot_q{}.png".format(num_quadrant_inputs),
-    #     )
-
-    #     # Retrieve conditional log likelihood
-    #     df = generate_table(
-    #         device=device,
-    #         num_quadrant_inputs=num_quadrant_inputs,
-    #         pre_trained_baseline=baseline_net,
-    #         pre_trained_cvae=cvae_net,
-    #         num_particles=args.num_particles,
-    #         col_name="{} quadrant{}".format(num_quadrant_inputs, maybes),
-    #     )
-    #     results.append(df)
-    #     columns.append("{} quadrant{}".format(num_quadrant_inputs, maybes))
-
-    # results = pd.concat(results, axis=1, ignore_index=True)
-    # results.columns = columns
-    # results.loc["Performance gap", :] = results.iloc[0, :] - results.iloc[1, :]
-    # results.to_csv("results.csv")
+    print(f"The log likelihoods are {results}")
 
 
 if __name__ == "__main__":
@@ -137,7 +79,7 @@ if __name__ == "__main__":
         help="theta: the digit to reproduce in the model output",
     )
     parser.add_argument(
-        "-n", "--num-epochs", default=101, type=int, help="number of training epochs"
+        "-n", "--num-epochs", default=5, type=int, help="number of training epochs"
     )
     parser.add_argument(
         "-esp", "--early-stop-patience", default=3, type=int, help="early stop patience"

@@ -32,23 +32,43 @@ def get_data(batch_size):
     transforms = Compose(
         [ToTensor()]
     )
-    dataset = CVAEMNIST("../data", transform=transforms, download=True)
-    # Forcing 80-20 test split, can configure this later.
-    train_size = int(len(dataset) * 0.8)
-    validation_size = len(dataset) - train_size
-    train_dataset, val_dataset = random_split(dataset, [train_size, validation_size])
+    datasets, dataloaders, dataset_sizes = {}, {}, {}
+    for mode in ["train", "val"]:
+        datasets[mode] = CVAEMNIST(
+            "../data", download=True, transform=transforms, train=mode == "train"
+        )
+        dataloaders[mode] = DataLoader(
+            datasets[mode],
+            batch_size=batch_size,
+            shuffle=mode == "train",
+            num_workers=0,
+        )
+        dataset_sizes[mode] = len(datasets[mode])
+
+    return datasets, dataloaders, dataset_sizes
 
 
-    dataloaders = {
-        "train": DataLoader(
-            train_dataset, batch_size=batch_size, shuffle=True, num_workers=0
-        ),
-        "val": DataLoader(
-            val_dataset, batch_size=batch_size, shuffle=False, num_workers=0
-        ),
-    }
+# def get_data(batch_size):
+#     transforms = Compose(
+#         [ToTensor()]
+#     )
+#     dataset = CVAEMNIST("../data", transform=transforms, download=True)
+#     # Forcing 80-20 test split, can configure this later.
+#     train_size = int(len(dataset) * 0.8)
+#     validation_size = len(dataset) - train_size
+#     train_dataset, val_dataset = random_split(dataset, [train_size, validation_size])
 
-    dataset_sizes = {"train": len(train_dataset), "val": len(val_dataset)}
 
-    return train_dataset, val_dataset, dataloaders, dataset_sizes
+#     dataloaders = {
+#         "train": DataLoader(
+#             train_dataset, batch_size=batch_size, shuffle=True, num_workers=0
+#         ),
+#         "val": DataLoader(
+#             val_dataset, batch_size=batch_size, shuffle=False, num_workers=0
+#         ),
+#     }
+
+#     dataset_sizes = {"train": len(train_dataset), "val": len(val_dataset)}
+
+#     return train_dataset, val_dataset, dataloaders, dataset_sizes
 
