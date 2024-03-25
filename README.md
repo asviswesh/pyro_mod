@@ -1,20 +1,18 @@
 This repository contains the code for a CVAE which predicts an MNIST image of a digit based on the corresponding digit passed in.
 
-To run, download this repository and create a custom conda environment as follows
+To run, download this repository and create the custom conda environment as follows from the .yml file provided.
 
 ```bash
-conda create --name <my-env>
+conda env create -f model.yml
 ```
 
-Install the following libraries: numpy, Pytorch, and matplotlib using the standard conda installations in this custom environment.
-
-To install the Pyro module within the same environment, run the following
+Activate the environment in the manner below
 
 ```bash
-conda install conda-forge::pyro-ppl
+conda activate myenv
 ```
 
-Once the conda environment has been configured, create a folder called 'data' inside the same root directory as the directory of the downloaded code. Then, run the following
+Once the conda environment has been created, create a folder called 'data' inside the same root directory as the directory of the downloaded code. We would recommend grouping all files contained into this repository into one folder (calling it 'cvae' for example), and consequently creating the 'data' folder in the same directory as the 'cvae' folder. Then, run the following
 
 ```bash
 <location of custom conda environment> <filepath to main.py>
