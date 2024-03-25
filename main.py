@@ -8,7 +8,7 @@ import cvae
 import pandas as pd
 import torch
 from torchvision.utils import save_image
-from util import generate_table, get_data, visualize
+from util import generate_table, get_data, one_hot_encode
 
 import pyro
 
@@ -20,23 +20,22 @@ def main(args):
     results = []
     columns = []
 
-    print("Running for theta = {}".format(args.theta_input))
-    label = torch.tensor(args.theta_input)
-    print(label)
+    label = args.theta_input
+    print("Running for theta = {}".format(label))
     _, dataloaders, dataset_sizes = get_data(
                 batch_size=128
         )
     
     # Ran to compare log likelihoods.
-    baseline_net = baseline.train(
-            device=device,
-            dataloaders=dataloaders,
-            dataset_sizes=dataset_sizes,
-            learning_rate=args.learning_rate,
-            num_epochs=args.num_epochs,
-            early_stop_patience=args.early_stop_patience,
-            model_path="baseline_net_theta{}.pth".format(args.theta_input),
-        )
+    # baseline_net = baseline.train(
+    #         device=device,
+    #         dataloaders=dataloaders,
+    #         dataset_sizes=dataset_sizes,
+    #         learning_rate=args.learning_rate,
+    #         num_epochs=args.num_epochs,
+    #         early_stop_patience=args.early_stop_patience,
+    #         model_path="baseline_net_theta{}.pth".format(args.theta_input),
+    #     )
     
     cvae_net = cvae.train(
             device=device,
@@ -52,19 +51,21 @@ def main(args):
     
     print("Finished running CVAE!")
 
-    reconstructed_image = cvae_net.model(label).detach().cpu()
-    save_image(reconstructed_image, f"/Users/aviswesh/Downloads/reconstructed_digit_{args.theta_input}.png")
+    reconstructed_image = cvae_net.model(one_hot_encode(label)).detach().cpu()
+    reconstructed_image = reconstructed_image.view(1, 28, 28)
+    print(f"reconstruct_image shape is {reconstructed_image.shape}")
+    save_image(reconstructed_image, f"/Users/aviswesh/Downloads/reconstructed_digit_{args.theta_input}_lr_{args.learning_rate}.png")
     # Retrive conditional log-likelihood
-    df = generate_table(
-            device=device,
-            pre_trained_baseline=baseline_net,
-            pre_trained_cvae=cvae_net,
-            num_particles=args.num_particles,
-            col_name="Log Likelihoods",
-        )
+    # df = generate_table(
+    #         device=device,
+    #         pre_trained_baseline=baseline_net,
+    #         pre_trained_cvae=cvae_net,
+    #         num_particles=args.num_particles,
+    #         col_name="Log Likelihoods",
+    #     )
     
-    results.append(df)
-    print(f"The log likelihoods are {results}")
+    # results.append(df)
+    # print(f"The log likelihoods are {results}")
 
 
 if __name__ == "__main__":
@@ -79,13 +80,13 @@ if __name__ == "__main__":
         help="theta: the digit to reproduce in the model output",
     )
     parser.add_argument(
-        "-n", "--num-epochs", default=5, type=int, help="number of training epochs"
+        "-n", "--num-epochs", default=20, type=int, help="number of training epochs"
     )
     parser.add_argument(
-        "-esp", "--early-stop-patience", default=3, type=int, help="early stop patience"
+        "-esp", "--early-stop-patience", default=4, type=int, help="early stop patience"
     )
     parser.add_argument(
-        "-lr", "--learning-rate", default=1.0e-3, type=float, help="learning rate"
+        "-lr", "--learning-rate", default=1e-3, type=float, help="learning rate"
     )
     parser.add_argument(
         "--cuda", action="store_true", default=False, help="whether to use cuda"

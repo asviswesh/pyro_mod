@@ -16,23 +16,15 @@ class BaselineNet(nn.Module):
         super().__init__()
         self.hidden_1 = hidden_1
         self.hidden_2 = hidden_2
-        self.fc1 = nn.Linear(128, hidden_1)
+        self.fc1 = nn.Linear(10, hidden_1)
         self.fc2 = nn.Linear(hidden_1, hidden_2)
-        self.fc3 = nn.Linear(hidden_2, 128*28*28) 
+        self.fc3 = nn.Linear(hidden_2, 784) 
         self.relu = nn.ReLU()
 
     def forward(self, x):
-        input_size = x.size(-1)
-
-        if input_size != self.fc1.in_features:
-            self.fc1 = nn.Linear(input_size, self.hidden_1)
-            self.fc2 = nn.Linear(self.hidden_1, self.hidden_2)
-            self.fc3 = nn.Linear(self.hidden_2, input_size*28*28)
-
         hidden = self.relu(self.fc1(x.float()))
         hidden = self.relu(self.fc2(hidden))
         y = torch.sigmoid(self.fc3(hidden))
-        y = y.view(input_size, 1, 28, 28)
         return y
 
     

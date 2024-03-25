@@ -15,7 +15,15 @@ from tqdm import tqdm
 
 from pyro.infer import Predictive, Trace_ELBO
 
-# Modified to not include num_quadrant_inputs
+def one_hot_encode(label):
+    assert(label >= 0 and label <= 9)
+    label_list = [0] * 10
+    label_list[label] = 1
+    return torch.as_tensor(
+            np.asarray(label_list), dtype=torch.int64
+        )
+
+
 def generate_table(
     device,
     pre_trained_baseline,

@@ -23,8 +23,10 @@ class CVAEMNIST(Dataset):
 class ToTensor:
     def __call__(self, sample):
         sample["original"] = functional.to_tensor(sample["original"])
+        digit_list = [0] * 10
+        digit_list[sample["digit"]] = 1
         sample["digit"] = torch.as_tensor(
-            np.asarray(sample["digit"]), dtype=torch.int64
+            np.asarray(digit_list), dtype=torch.int64
         )
         return sample
 
