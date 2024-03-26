@@ -13,7 +13,7 @@ import pyro.distributions as dist
 from pyro.infer import SVI, Trace_ELBO
 
 
-class Encoder(nn.Module):
+class PriorNet(nn.Module):
     def __init__(self, x_dim, z_dim, hidden_1, hidden_2):
         super().__init__()
         # Input: one-hot encoded digit (dim: 10)
@@ -34,7 +34,7 @@ class Encoder(nn.Module):
         return z_loc, z_scale
 
 
-class Decoder(nn.Module):
+class GenerationNet(nn.Module):
     def __init__(self, z_dim, hidden_1, hidden_2):
         super().__init__()
         # Input: sample from normal dist - params: z_loc, z_scale (dim 200)
@@ -48,11 +48,35 @@ class Decoder(nn.Module):
         y = self.relu(self.fc1(z))
         y = self.relu(self.fc2(y))
         y = torch.sigmoid(self.fc3(y))
+        y = y.view(-1, 1, 28, 28)
         return y
 
 
+class RecognitionNet(nn.Module):
+    def __init__(self, x_dim, y_dim, z_dim, hidden_1, hidden_2):
+        super().__init__()
+        # Input: one-hot encoded digit (dim: 10), output image from gen network (dim: 1x28x28 -> flattened to 784)
+        # Output: z_loc and z_scale (dim z_dim) - mean and covariance parameters respectively for the Gaussian.
+        self.fc1 = nn.Linear(x_dim + y_dim, hidden_1) 
+        self.fc2 = nn.Linear(hidden_1, hidden_2)
+        self.fc31 = nn.Linear(hidden_2, z_dim)
+        self.fc32 = nn.Linear(hidden_2, z_dim)
+        self.relu = nn.ReLU()
+
+    def forward(self, x, y):
+        y_flat = y.view(y.size(0), -1)
+        combined_tensor = torch.cat((x, y_flat), dim=1)
+        hidden = self.relu(self.fc1(combined_tensor.float()))
+        hidden = self.relu(self.fc2(hidden))
+        # then return a mean vector and a (positive) square root covariance
+        # each of size batch_size x z_dim
+        z_loc = self.fc31(hidden)
+        z_scale = torch.exp(self.fc32(hidden))
+        return z_loc, z_scale
+
+
 class CVAE(nn.Module):
-    def __init__(self, x_dim, z_dim, hidden_1, hidden_2):
+    def __init__(self, x_dim, y_dim, z_dim, hidden_1, hidden_2):
         super().__init__()
         # The CVAE is composed of multiple MLPs, such as recognition network
         # qφ(z|x, y), (conditional) prior network pθ(z|x), and generation
@@ -60,9 +84,9 @@ class CVAE(nn.Module):
         # the direct input x, but also the initial guess y_hat made by the NN
         # are fed into the prior network.
         # self.baseline_net = pre_trained_baseline_net
-        self.prior_net = Encoder(x_dim, z_dim, hidden_1, hidden_2)
-        self.generation_net = Decoder(z_dim, hidden_1, hidden_2)
-        self.recognition_net = Encoder(x_dim, z_dim, hidden_1, hidden_2)
+        self.prior_net = PriorNet(x_dim, z_dim, hidden_1, hidden_2)
+        self.generation_net = GenerationNet(z_dim, hidden_1, hidden_2)
+        self.recognition_net = RecognitionNet(x_dim, y_dim, z_dim, hidden_1, hidden_2)
 
     def model(self, xs, ys=None):
         # register this pytorch module and all of its sub-modules with pyro
@@ -75,11 +99,12 @@ class CVAE(nn.Module):
 
             # Latent variable is a sample from the Gaussian distribution.
             zs = pyro.sample("z", dist.Normal(prior_loc, prior_scale).to_event(1))
-
+            # print("Prior net finished!")
             # the output y (image) is generated from the distribution pθ(y|x, z)
             loc = self.generation_net(zs)
-            # pyro.deterministic("y", loc.detach())
-
+            # print(loc.shape)
+            # print(loc[0])
+            # print("Generation net finished!")
             # if ys is not None:
             #     #modified commented out mask_loc, mask_ys
             #     # In training, we will only sample in the masked image
@@ -108,17 +133,16 @@ class CVAE(nn.Module):
 
     def guide(self, xs, ys=None):
         with pyro.plate("data"):
-
-            #modified commented out y_hat
             if ys is None:
                 # at inference time, ys is not provided. In that case,
                 # the model uses the prior network
                 # y_hat = self.baseline_net(xs).view(xs.shape)
+                print("Using prior network")
                 loc, scale = self.prior_net(xs)
             else:
                 # at training time, uses the variational distribution
                 # q(z|x,y) = normal(loc(x,y),scale(x,y))
-                loc, scale = self.recognition_net(xs)
+                loc, scale = self.recognition_net(xs, ys)
 
             pyro.sample("z", dist.Normal(loc, scale).to_event(1))
 
@@ -135,7 +159,7 @@ def train(
     # clear param store
     pyro.clear_param_store()
 
-    cvae_net = CVAE(10, 200, 500, 500) #modified
+    cvae_net = CVAE(10, 784, 300, 600, 600) #modified
     cvae_net.to(device)
     optimizer = pyro.optim.Adam({"lr": learning_rate})
     svi = SVI(cvae_net.model, cvae_net.guide, optimizer, loss=Trace_ELBO())
@@ -158,8 +182,12 @@ def train(
             )
             for i, batch in enumerate(bar):
                 inputs = batch["digit"].to(device) #modified
-                # print(inputs)
+                # print(inputs.shape)
+                # print(inputs[0])
                 outputs = batch["original"].to(device) #modified
+                # print(f"The first image output is {outputs[0]}")
+                # print(outputs[0])
+                # print(outputs.shape)
 
                 if phase == "train":
                     loss = svi.step(inputs, outputs)

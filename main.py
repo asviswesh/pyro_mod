@@ -25,7 +25,7 @@ def main(args):
     _, dataloaders, dataset_sizes = get_data(
                 batch_size=128
         )
-    
+    one_hot_label = one_hot_encode(label)
     # Ran to compare log likelihoods.
     # baseline_net = baseline.train(
     #         device=device,
@@ -50,11 +50,10 @@ def main(args):
 
     
     print("Finished running CVAE!")
-
-    reconstructed_image = cvae_net.model(one_hot_encode(label)).detach().cpu()
+    reconstructed_image = cvae_net.model(one_hot_label).detach().cpu()
     reconstructed_image = reconstructed_image.view(1, 28, 28)
     print(f"reconstruct_image shape is {reconstructed_image.shape}")
-    save_image(reconstructed_image, f"/Users/aviswesh/Downloads/reconstructed_digit_{args.theta_input}_lr_{args.learning_rate}.png")
+    save_image(reconstructed_image, f"/Users/aviswesh/Downloads/reconstructed_digit_{args.theta_input}_det.png")
     # Retrive conditional log-likelihood
     # df = generate_table(
     #         device=device,

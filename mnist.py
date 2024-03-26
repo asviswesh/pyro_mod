@@ -26,7 +26,7 @@ class ToTensor:
         digit_list = [0] * 10
         digit_list[sample["digit"]] = 1
         sample["digit"] = torch.as_tensor(
-            np.asarray(digit_list), dtype=torch.int64
+            np.asarray(digit_list), dtype=torch.float64
         )
         return sample
 
@@ -46,7 +46,6 @@ def get_data(batch_size):
             num_workers=0,
         )
         dataset_sizes[mode] = len(datasets[mode])
-
     return datasets, dataloaders, dataset_sizes
 
 
