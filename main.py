@@ -3,7 +3,6 @@
 
 import argparse
 
-import baseline
 import cvae
 import pandas as pd
 import torch
@@ -17,54 +16,29 @@ def main(args):
     device = torch.device(
         "cuda:0" if torch.cuda.is_available() and args.cuda else "cpu"
     )
-    results = []
-    columns = []
-
-    label = args.theta_input
-    print("Running for theta = {}".format(label))
     _, dataloaders, dataset_sizes = get_data(
-                batch_size=128
-        )
-    one_hot_label = one_hot_encode(label)
-    # Ran to compare log likelihoods.
-    # baseline_net = baseline.train(
-    #         device=device,
-    #         dataloaders=dataloaders,
-    #         dataset_sizes=dataset_sizes,
-    #         learning_rate=args.learning_rate,
-    #         num_epochs=args.num_epochs,
-    #         early_stop_patience=args.early_stop_patience,
-    #         model_path="baseline_net_theta{}.pth".format(args.theta_input),
-    #     )
+                    batch_size=128
+            )
     
     cvae_net = cvae.train(
-            device=device,
-            dataloaders=dataloaders,
-            dataset_sizes=dataset_sizes,
-            learning_rate=args.learning_rate,
-            num_epochs=args.num_epochs,
-            early_stop_patience=args.early_stop_patience,
-            model_path="cvae_net_theta{}.pth".format(args.theta_input),
-        )
-    
+                device=device,
+                dataloaders=dataloaders,
+                dataset_sizes=dataset_sizes,
+                learning_rate=args.learning_rate,
+                num_epochs=args.num_epochs,
+                early_stop_patience=args.early_stop_patience,
+                model_path="cvae_net.pth",
+            )
 
-    
-    print("Finished running CVAE!")
-    reconstructed_image = cvae_net.model(one_hot_label).detach().cpu()
-    reconstructed_image = reconstructed_image.view(1, 28, 28)
-    print(f"reconstruct_image shape is {reconstructed_image.shape}")
-    save_image(reconstructed_image, f"/Users/aviswesh/Downloads/reconstructed_digit_{args.theta_input}_det.png")
-    # Retrive conditional log-likelihood
-    # df = generate_table(
-    #         device=device,
-    #         pre_trained_baseline=baseline_net,
-    #         pre_trained_cvae=cvae_net,
-    #         num_particles=args.num_particles,
-    #         col_name="Log Likelihoods",
-    #     )
-    
-    # results.append(df)
-    # print(f"The log likelihoods are {results}")
+    for theta_input in args.theta_inputs:
+        label = theta_input
+        print("Reconstructing digit = {}".format(label))
+        
+        one_hot_label = one_hot_encode(label)
+        
+        reconstructed_image = cvae_net.model(one_hot_label).detach().cpu()
+        reconstructed_image = reconstructed_image.view(1, 28, 28)
+        save_image(reconstructed_image, f"../image_results/digit_{label}.png")
 
 
 if __name__ == "__main__":
@@ -73,16 +47,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="parse args")
     parser.add_argument(
         "-theta",
-        "--theta-input",
+        "--theta-inputs",
         type=int,
-        default=1,
+        nargs='+',
+        default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
         help="theta: the digit to reproduce in the model output",
     )
     parser.add_argument(
         "-n", "--num-epochs", default=20, type=int, help="number of training epochs"
     )
     parser.add_argument(
-        "-esp", "--early-stop-patience", default=4, type=int, help="early stop patience"
+        "-esp", "--early-stop-patience", default=3, type=int, help="early stop patience"
     )
     parser.add_argument(
         "-lr", "--learning-rate", default=1e-3, type=float, help="learning rate"

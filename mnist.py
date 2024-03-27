@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from torch.utils.data import DataLoader, Dataset, random_split
+from torch.utils.data import DataLoader, Dataset
 from torchvision.transforms import Compose, functional
 
 from pyro.contrib.examples.util import MNIST
@@ -47,29 +47,4 @@ def get_data(batch_size):
         )
         dataset_sizes[mode] = len(datasets[mode])
     return datasets, dataloaders, dataset_sizes
-
-
-# def get_data(batch_size):
-#     transforms = Compose(
-#         [ToTensor()]
-#     )
-#     dataset = CVAEMNIST("../data", transform=transforms, download=True)
-#     # Forcing 80-20 test split, can configure this later.
-#     train_size = int(len(dataset) * 0.8)
-#     validation_size = len(dataset) - train_size
-#     train_dataset, val_dataset = random_split(dataset, [train_size, validation_size])
-
-
-#     dataloaders = {
-#         "train": DataLoader(
-#             train_dataset, batch_size=batch_size, shuffle=True, num_workers=0
-#         ),
-#         "val": DataLoader(
-#             val_dataset, batch_size=batch_size, shuffle=False, num_workers=0
-#         ),
-#     }
-
-#     dataset_sizes = {"train": len(train_dataset), "val": len(val_dataset)}
-
-#     return train_dataset, val_dataset, dataloaders, dataset_sizes
 
