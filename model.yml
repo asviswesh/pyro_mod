@@ -11,7 +11,7 @@ dependencies:
   - notebook
   - jupyter_client[version='<8']
   - pyzmq[version='<25']
-  - torchaudio
+  - pytorch::torchaudio
   - torchvision
   - tqdm
   - conda-forge::pyro-ppl
