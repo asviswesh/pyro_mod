@@ -1,0 +1,18 @@
+name: modelling_research
+channels:
+  - defaults
+dependencies:
+  - matplotlib
+  - pandas
+  - pytorch
+  - ipykernel
+  - requests
+  - anaconda::scikit-image
+  - notebook
+  - jupyter_client[version='<8']
+  - pyzmq[version='<25']
+  - torchaudio
+  - torchvision
+  - tqdm
+  - conda-forge::pyro-ppl
+prefix: /Users/aviswesh/opt/anaconda3/envs/modelling_research
