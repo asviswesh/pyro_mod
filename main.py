@@ -29,16 +29,16 @@ def main(args):
                 early_stop_patience=args.early_stop_patience,
                 model_path="cvae_net.pth",
             )
-
-    for theta_input in args.theta_inputs:
-        label = theta_input
-        print("Reconstructing digit = {}".format(label))
-        
-        one_hot_label = one_hot_encode(label)
-        
-        reconstructed_image = cvae_net.model(one_hot_label).detach().cpu()
-        reconstructed_image = reconstructed_image.view(1, 28, 28)
-        save_image(reconstructed_image, f"../image_results/digit_{label}.png")
+    for i in range(1, 6):
+        for theta_input in args.theta_inputs:
+            label = theta_input
+            print("Reconstructing digit = {}".format(label))
+            
+            one_hot_label = one_hot_encode(label)
+            
+            reconstructed_image = cvae_net.model(one_hot_label).detach().cpu()
+            reconstructed_image = reconstructed_image.view(1, 28, 28)
+            save_image(reconstructed_image, f"../image_results/digit_{label}_run_{i}_no_bern.png")
 
 
 if __name__ == "__main__":
