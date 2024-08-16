@@ -3,7 +3,7 @@ This repository contains the code for a CVAE which predicts an MNIST image of a 
 To run, download this repository and create the custom conda environment as follows from the .yml file provided.
 
 ```bash
-conda env create -f model.yml
+conda env create -f model.yaml
 ```
 
 Activate the environment in the manner below
